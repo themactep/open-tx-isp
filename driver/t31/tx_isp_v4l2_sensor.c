@@ -32,7 +32,7 @@
 
 #define TX_V4L2_NAME_LEN	32
 #define TX_V4L2_CHIP_ID		0xcb3a
-#define TX_V4L2_MAX_GAIN	tx_v4l2_gain_lut[ARRAY_SIZE(tx_v4l2_gain_lut) - 1]
+#define TX_V4L2_MAX_GAIN	327680
 #define TX_V4L2_MIN_EXPOSURE	2
 #define TX_V4L2_EXPOSURE_OFFSET	4
 
@@ -70,42 +70,28 @@ static struct tx_isp_subdev *tx_isp_v4l2_sensor_sd;
  * vendor gain table by index.  Keep the same ISP-gain to index mapping as
  * the vendor driver so the AE algorithm behaves identically.
  */
-/*
- * Q10 analogue gain actually produced by each index of the sensor driver's
- * gain table, i.e. the model the AE uses to decide exposure.  The indexes are
- * the V4L2 analogue-gain control values; the sensor writes
- * {coarse, fine} = {index>>8, index&0xff} scaled through its own table.
- *
- * Derived from the SC gain coding, gain = 1 + coarse + (fine - 128)/128, which
- * is what the sensor does for the register table the driver ports from the
- * vendor source.  The vendor driver's own Q10 column is not that curve: it is
- * a linear ramp in the index (0, 2886, 5776, ... 327680), so it claimed 62x
- * where the sensor gives 1.97x and 0x where it gives 1.0x.  The AE trusted it,
- * could not close its loop, and oscillated the integration time instead - see
- * the observation behind this change: index 0 has to read 1.0x, never 0.
- */
 static const u32 tx_v4l2_gain_lut[] = {
-	  1024,   1056,   1088,   1120,   1152,   1184,   1216,   1248,
-	  1280,   1312,   1344,   1376,   1408,   1440,   1472,   1504,
-	  1536,   1568,   1600,   1632,   1664,   1696,   1728,   1760,
-	  1792,   1824,   1856,   1888,   1920,   1952,   1984,   2016,
-	  9216,   9248,   9280,   9312,   9344,   9376,   9408,   9440,
-	  9472,   9504,   9536,   9568,   9600,   9632,   9664,   9696,
-	  9728,   9760,   9792,   9824,   9856,   9888,   9920,   9952,
-	  9984,  10016,  10048,  10080,  10112,  10144,  10176,  10208,
-	 10240,  10272,  10304,  10336,  10368,  10400,  10432,  10464,
-	 10496,  10528,  10560,  10592,  10624,  10656,  10688,  10720,
-	 10752,  10784,  10816,  10848,  10880,  10912,  10944,  10976,
-	 11008,  11040,  11072,  11104,  11136,  11168,  11200,  11232,
-	 12288,  12320,  12352,  12384,  12416,  12448,  12480,  12512,
-	 12544,  12576,  12608,  12640,  12672,  12704,  12736,  12768,
-	 12800,  12832,  12864,  12896,  12928,  12960,  12992,  13024,
-	 13056,  13088,  13120,  13152,  13184,  13216,  13248,  13280,
-	 16384,  16416,  16448,  16480,  16512,  16544,  16576,  16608,
-	 16640,  16672,  16704,  16736,  16768,  16800,  16832,  16864,
-	 16896,  16928,  16960,  16992,  17024,  17056,  17088,  17120,
-	 17152,  17184,  17216,  17248,  17280,  17312,  17344,  17376,
-	 32768
+	0, 2886, 5776, 8494, 11136, 13706, 16287, 18723,
+	21097, 23414, 25746, 27953, 30109, 32217, 34345, 36361,
+	38336, 40270, 42226, 44082, 45904, 47690, 49500, 51220,
+	52910, 54571, 56254, 57857, 59433, 60984, 62558, 64059,
+	65536, 68422, 71312, 74030, 76672, 79242, 81823, 84259,
+	86633, 88950, 91282, 93489, 95645, 97753, 99881, 101897,
+	103872, 105806, 107762, 109618, 111440, 113226, 115036, 116756,
+	118446, 120107, 121790, 123393, 124969, 126520, 128094, 129595,
+	131072, 133958, 136848, 139566, 142208, 144778, 147359, 149795,
+	152169, 154486, 156818, 159025, 161181, 163289, 165417, 167433,
+	169408, 171342, 173298, 175154, 176976, 178762, 180572, 182292,
+	183982, 185643, 187326, 188929, 190505, 192056, 193630, 195131,
+	196608, 199494, 202384, 205102, 207744, 210314, 212895, 215331,
+	217705, 220022, 222354, 224561, 226717, 228825, 230953, 232969,
+	234944, 236878, 238834, 240690, 242512, 244298, 246108, 247828,
+	249518, 251179, 252862, 254465, 256041, 257592, 259166, 260667,
+	262144, 265030, 267920, 270638, 273280, 275850, 278431, 280867,
+	283241, 285558, 287890, 290097, 292253, 294361, 296489, 298505,
+	300480, 302414, 304370, 306226, 308048, 309834, 311644, 313364,
+	315054, 316715, 318398, 320001, 321577, 323128, 324702, 326203,
+	327680,
 };
 
 static unsigned int tx_v4l2_alloc_again(unsigned int isp_gain,
@@ -116,7 +102,7 @@ static unsigned int tx_v4l2_alloc_again(unsigned int isp_gain,
 
 	if (isp_gain == 0) {
 		*sensor_again = 0;
-		return tx_v4l2_gain_lut[0];
+		return 0;
 	}
 
 	for (i = 1; i < ARRAY_SIZE(tx_v4l2_gain_lut); i++) {
